@@ -11,29 +11,6 @@ enum {
     MODE_MAX
 };
 
-#define YEAR_MIN    1900
-#define YEAR_MAX    2099
-#define MONTH_MIN   1
-#define MONTH_MAX   12
-#define DAY_MIN     1
-#define HOUR_MIN    0
-#define HOUR_MAX    23
-#define MINUTE_MIN  0
-#define MINUTE_MAX  59
-#define SECOND_MIN  0
-#define SECOND_MAX  59
-
-enum {
-    YOUBI_SUN = 0,
-    YOUBI_MON,
-    YOUBI_TUE,
-    YOUBI_WED,
-    YOUBI_THU,
-    YOUBI_FRI,
-    YOUBI_SAT,
-    YOUBI_MAX
-};
-
 #define YEAR_DISPLAY_MIN    1900
 #define DISPLAY_DURATION    30
 
@@ -45,7 +22,7 @@ enum {
 #define C_DATE      rgb565(255, 255, 192)
 #define C_TIME      rgb565(64,  255, 64 )
 #define C_SUNDAY    rgb565(255, 160, 160)
-#define C_WEEKDAY   rgb565(240, 255, 255)
+#define C_WEEKDAY   rgb565(255, 255, 255)
 #define C_SATURDAY  rgb565(192, 192, 255)
 #define C_HOLIDAY   rgb565(255, 64,  255)
 #define C_MEMORIAL  rgb565(255, 255, 0  )
@@ -60,7 +37,7 @@ enum {
 
 PROGMEM static const uint8_t youbiBitmap[YOUBI_MAX][10] = { // 11x5 x7
     { 0x6A, 0xC0, 0x8A, 0xA0, 0xEA, 0xA0, 0x2A, 0xA0, 0xC6, 0xA0 }, // SUN
-    { 0xEE, 0xC0, 0xEA, 0xA0, 0xAA, 0xA0, 0xAA, 0xA0, 0xAE, 0xA0 }, // MON
+    { 0xE6, 0xC0, 0xEA, 0xA0, 0xAA, 0xA0, 0xAA, 0xA0, 0xAC, 0xA0 }, // MON
     { 0xEA, 0xE0, 0x4A, 0x80, 0x4A, 0xC0, 0x4A, 0x80, 0x46, 0xE0 }, // TUE
     { 0xAE, 0xC0, 0xA8, 0xA0, 0xAC, 0xA0, 0xE8, 0xA0, 0xEE, 0xE0 }, // WED
     { 0xEA, 0xA0, 0x4A, 0xA0, 0x4E, 0xA0, 0x4A, 0xA0, 0x4A, 0x60 }, // THU
@@ -70,22 +47,30 @@ PROGMEM static const uint8_t youbiBitmap[YOUBI_MAX][10] = { // 11x5 x7
 
 /*-----------------------------------------------------------------------------------------------*/
 
+#ifdef USE_RTC
+CalendarManager::CalendarManager(RX8xxxManager &rtc, Adafruit_GFX &gfx) : rtc(rtc), gfx(gfx)
+#else
 CalendarManager::CalendarManager(Adafruit_GFX &gfx) : gfx(gfx)
+#endif
 {
     isInisialized = false;
 }
 
-void CalendarManager::initialize(int year, int month, int day)
+void CalendarManager::initialize(void)
 {
+#ifdef USE_RTC
+    getCurrentDateTimeFromRtc();
+#else
     /*  Initialize parameters  */
     mode = MODE_NORMAL;
-    currentYear = year;
-    currentMonth = month;
-    currentDay = day;
+    currentYear = YEAR_DEFAULT;
+    currentMonth = MONTH_DEFAULT;
+    currentDay = DAY_DEFAULT;
     currentDayMax = calculateDayMax(currentYear, currentMonth);
-    currentHour = HOUR_MIN;
-    currentMinute = MINUTE_MIN;
-    currentSecond = SECOND_MIN;
+    currentHour = HOUR_DEFAULT;
+    currentMinute = MINUTE_DEFAULT;
+    currentSecond = SECOND_DEFAULT;
+#endif
     displayYear = currentYear;
     displayMonth = currentMonth;
 
@@ -107,6 +92,12 @@ void CalendarManager::execute(int seconds, bool isPressUp, bool isPressDown, boo
     int velocity = isPressUp - isPressDown;
     if (isPressSet) {
         mode = (mode + 1) % MODE_MAX;
+#ifdef USE_RTC
+        if (mode == MODE_NORMAL) {
+            rtc.setDateTime(currentYear, currentMonth, currentDay,
+                    currentHour, currentMinute, currentSecond);
+        }
+#endif
         isRefreshCurrent = true;
     }
 
@@ -115,18 +106,25 @@ void CalendarManager::execute(int seconds, bool isPressUp, bool isPressDown, boo
             displayMonth = adjustParameter(displayMonth + velocity, MONTH_MIN, MONTH_MAX);
             if (velocity > 0 && displayMonth == MONTH_MIN ||
                     velocity < 0 && displayMonth == MONTH_MAX) {
-                displayYear = adjustParameter(displayYear + velocity, YEAR_MIN, YEAR_MAX);
+                displayYear = adjustParameter(displayYear + velocity, YEAR_DISPLAY_MIN, YEAR_MAX);
             }
             displayCounter = DISPLAY_DURATION;
         }
-        while (seconds > 0) {
-            forwardOneSecond();
-            if (displayCounter > 0) displayCounter--;
-            seconds--;
-        }
-        if (displayCounter == 0) {
-            displayYear = currentYear;
-            displayMonth = currentMonth;
+        if (seconds > 0) {
+            displayCounter -= seconds;
+#ifdef USE_RTC
+            currentSecond += seconds;
+            if (currentSecond > SECOND_MAX) getCurrentDateTimeFromRtc();
+#else
+            do {
+                forwardOneSecond();
+            } while (--seconds > 0);
+#endif
+            if (displayCounter <= 0) {
+                displayYear = currentYear;
+                displayMonth = currentMonth;
+                displayCounter = 0;
+            }
         }
     } else {
         if (velocity) {
@@ -156,9 +154,9 @@ void CalendarManager::execute(int seconds, bool isPressUp, bool isPressDown, boo
                 break;
             }
         }
-        displayCounter = 0;
         displayYear = currentYear;
         displayMonth = currentMonth;
+        displayCounter = 0;
     }
     drawCurrentDate(isRefreshCurrent);
     drawCurrentTime(isRefreshCurrent);
@@ -166,6 +164,15 @@ void CalendarManager::execute(int seconds, bool isPressUp, bool isPressDown, boo
 }
 
 /*-----------------------------------------------------------------------------------------------*/
+
+#ifdef USE_RTC
+void CalendarManager::getCurrentDateTimeFromRtc(void)
+{
+    rtc.getDateTime(currentYear, currentMonth, currentDay,
+            currentHour, currentMinute, currentSecond);
+    currentDayMax = calculateDayMax(currentYear, currentMonth);
+}
+#endif
 
 int CalendarManager::zeller(int year, int month, int day) // ツェラーの公式
 {
