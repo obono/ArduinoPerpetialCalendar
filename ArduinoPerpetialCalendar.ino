@@ -6,7 +6,7 @@
 #include "RX8xxxManager.h"
 #endif
 
-#define VERSION     "0.02"
+#define VERSION     "0.03"
 
 #define TFT_CS      10
 #define TFT_RST     9

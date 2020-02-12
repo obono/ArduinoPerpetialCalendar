@@ -6,7 +6,11 @@ A perpetial calendar by Arduino Nano.
 
 ![Picture](etc/picture.jpg)
 
-Basically, holidays follow the Japanese calendar rules.
+The current date, the current time, and the calendar of the current month is displayed usually. Holidays follow the Japanese calendar rules.
+
+The month of the displayed calendar is changed by pressing + or -. After several seconds, it reverts to the current automatically.
+
+To adjust the date and time, the focus appears by pressing SET and the focused value can be changed by pressing + or -.
 
 ## Hardware
 

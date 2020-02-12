@@ -29,8 +29,12 @@ private:
     void    drawCurrentTime(bool isEntire);
     void    drawCalendarHeader(void);
     void    drawCalendar(int year, int month);
-    void    drawFigures(int x, int y, int num, char padding);
-    void    drawChar(int x, int y, char c);
+    void    drawNumber(int x, int y, int number, int digits, char padding,
+                int (CalendarManager::*func)(int, int, char, uint16_t, uint16_t),
+                uint16_t fgColor, uint16_t bgColor);
+    int     drawSmallChar(int x, int y, char c, uint16_t fgColor, uint16_t bgColor);
+    int     drawMediumChar(int x, int y, char c, uint16_t fgColor, uint16_t bgColor);
+    int     drawLargeChar(int x, int y, char c, uint16_t fgColor, uint16_t bgColor);
     void    drawTodayFrame(int day, uint16_t color);
 
 #ifdef USE_RTC
