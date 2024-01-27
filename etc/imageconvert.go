@@ -57,7 +57,7 @@ func convertImage(im image.Image, x int, y int, w int, h int) {
 		value := 0
 		for dx := 0; dx < w; dx++ {
 			r, g, b, a := im.At(x+dx, y+dy).RGBA()
-			if a >= 128 && r*3+g*6+b >= 1280 {
+			if a >= 32768 && r*3+g*6+b >= 327680 {
 				value += 1 << uint(7-dx%8)
 			}
 			if dx%8 == 7 || dx == w-1 {

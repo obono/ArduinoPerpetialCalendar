@@ -14,7 +14,7 @@ To adjust the date and time, the focus appears by pressing SET and the focused v
 
 ## Hardware
 
-### Materials
+### Components
 
 * [Arduino Nano](https://store.arduino.cc/usa/arduino-nano) (or compatible product)
 * 128&times;128 full color display using ST7735S driver [(example)](https://www.tindie.com/products/joylife/144-128x128-full-color-tft-lcd-display-module/)
@@ -74,4 +74,4 @@ You must use `SPECIAL_DATE` macro. Basically, its arguments are the month and th
 
 ### License
 
-These codes are licensed under [MIT-License](LICENSE).
+These codes are licensed under [MIT License](LICENSE).
